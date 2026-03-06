@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LS Lifecycle Email QA Hub</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="container">
+    <img src="https://cdn.brandfolder.io/XQW73PF4/at/3bvwsgrsxm5chjn2chhx7q5/LS_Lifecycle_Email_QA_Hub.jpg" alt="LS Lifecycle Email QA Hub Logo" class="header-logo" />
+    
+    <div class="subtitle">
+      Paste email page source → Run QA → rows with issues highlight red. Hover thumbnails to enlarge. Copy the revision summary into Trello.
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Email HTML</h2>
+        <textarea id="htmlInput" placeholder="Paste page source here..."></textarea>
+
+        <div id="fileSizeWarning" style="margin-bottom: 12px; font-size: 13px;"></div>
+
+        <div class="stackedBtns">
+          <button class="primary" id="btnRun">Run QA</button>
+          <button class="secondary" id="btnPasteRun">Paste &amp; Run</button>
+          <button class="secondary" id="btnScreenshot">📸 Save Preview as Image</button>
+          <button class="secondary" id="btnClear">Reset</button>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div id="headlineCheckWrap" class="panel" style="margin-top:14px; display:none; background: #fafafa; border-color: #d6d6d6;">
+          <h2 style="margin:0 0 8px; font-size: 14px;">Live Text (Headlines) Check</h2>
+          <div id="headlineCheckResult"></div>
+        </div>
+
+        <div class="panel revBox">
+          <div class="revTop">
+            <h2 style="margin:0; cursor:pointer;" id="toggleRevSummary">Trello Revision Notes <span id="revChevron">▼</span></h2>
+            <button class="copyBtn" id="btnCopySummary">Copy summary</button>
+          </div>
+          <div id="revContent">
+            <textarea id="revSummary" readonly placeholder="Run QA to generate revision notes…"></textarea>
+            <div class="status" id="copyStatus"></div>
+          </div>
+        </div>
+
+        <div class="status" style="margin-top:10px;">
+          <strong>Alt checks:</strong> missing/empty, double spaces, double quotes (<code>"</code>), filename-ish alt.<br>
+          <strong>Link checks:</strong> missing href, <code>#</code>, <code>javascript:</code>, <code>http://</code>.
+        </div>
+      </div>
+
+      <div class="panel preview-panel">
+        <div class="inbox-simulator">
+          <div class="inbox-header">Inbox Preview</div>
+          <div class="inbox-row">
+            <div class="inbox-avatar">LS</div>
+            <div class="inbox-content">
+              <div class="inbox-sender">Living Spaces <span class="inbox-time">10:59 AM</span></div>
+              <div class="inbox-subject" id="inboxSubject">Subject Line</div>
+              <div class="inbox-preheader" id="inboxPreheader">Preheader text...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="previewHeader" style="margin-top: 16px;">
+          <h2 style="margin:0;">Email preview</h2>
+          <div class="toggles">
+            <label class="toggleRow"><input id="imagesOffToggle" type="checkbox" /> Images off</label>
+            <label class="toggleRow"><input id="rowNumbersToggle" type="checkbox" /> Number images</label>
+            <label class="toggleRow"><input id="previewDarkToggle" type="checkbox" /> Dark mode</label>
+            <label class="toggleRow">
+              <input id="safePreviewToggle" type="checkbox" checked /> Safe preview
+              <span class="infoIcon">ⓘ
+                <span class="tooltip">
+                  <strong>Safe mode means:</strong><br><br>
+                  • Scripts inside the pasted email do NOT run<br>
+                  • Forms won’t submit<br>
+                  • Popups won’t open<br>
+                  • JS tracking won’t execute<br>
+                  • No redirects<br><br>
+                  It basically makes the preview read-only and non-executable.
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="status" style="margin-top:0; margin-bottom:8px;">
+          Preview links become clickable when <strong>Safe preview</strong> is OFF.
+        </div>
+
+        <iframe id="emailFrame" sandbox="allow-same-origin"></iframe>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px;">
+      <div class="imagesHeader">
+        <h2 style="margin:0;">Images <span id="imagesCount"></span></h2>
+        <div class="imagesControls">
+          <label class="toggleRow"><input id="fullUrlToggle" type="checkbox" /> Show full URLs</label>
+        </div>
+      </div>
+      <div class="tableWrap">
+        <table id="imagesTable">
+          <thead>
+            <tr>
+              <th style="width:44px;">#</th>
+              <th style="width:150px;">Preview</th>
+              <th>Link URL</th>
+              <th style="width:260px;">Issues</th>
+              <th style="width:360px;">Alt</th>
+            </tr>
+          </thead>
+          <tbody id="imagesBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="skuLinksWrap" class="panel" style="margin-top:16px; display:none; background: #fafafa; border-color: #d6d6d6;">
+      <div class="revTop">
+        <h2 style="margin:0; font-size: 14px;">Links With SKUs For Asset Registry</h2>
+        <button class="copyBtn" id="btnCopySkuLinks" style="padding: 6px 10px; font-size: 11px;">Copy Links (;)</button>
+      </div>
+      <div id="skuLinksResult" style="margin-top: 12px; font-size: 13px; max-height: 280px; overflow-y: auto; padding-right: 8px;"></div>
+    </div>
+
+    <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:10px;">
+      <button class="secondary" id="btnExportLinks" style="width:auto; padding:10px 20px; font-size: 12px;">Export links CSV</button>
+      <button class="secondary" id="btnExportImages" style="width:auto; padding:10px 20px; font-size: 12px;">Export images CSV</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
